@@ -7,11 +7,17 @@ import com.example.server.models.TicketResponse;
 import com.example.server.repositories.DeviceLicenseRepository;
 import com.example.server.repositories.DeviceRepository;
 import com.example.server.repositories.LicenseRepository;
+import com.example.server.signature.SigningService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TicketService {
@@ -19,6 +25,7 @@ public class TicketService {
     private final LicenseRepository licenseRepository;
     private final DeviceRepository deviceRepository;
     private final DeviceLicenseRepository deviceLicenseRepository;
+    private final SigningService signingService;
 
     @Value("${ticket.time-to-live:300}")
     private Long defaultTimeToLive;
@@ -55,13 +62,24 @@ public class TicketService {
                 .blocked(license.getBlocked())
                 .build();
 
+        // Generate signature
+        String signature = null;
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("ticket", ticket);
+            payload.put("timestamp", System.currentTimeMillis());
+            signature = signingService.sign(payload);
+            log.info("Ticket signed successfully for license: {}", license.getCode());
+        } catch (Exception e) {
+            log.warn("Failed to sign ticket: {}", e.getMessage());
+        }
+
         return TicketResponse.builder()
                 .ticket(ticket)
-                .signature(null)
+                .signature(signature)
                 .build();
     }
 
-    // Добавьте этот метод
     public TicketResponse generateTicketByLicenseId(Long licenseId, Long deviceId, Long userId) {
         License license = licenseRepository.findById(licenseId)
                 .orElseThrow(() -> new RuntimeException("License not found"));
@@ -94,9 +112,21 @@ public class TicketService {
                 .blocked(license.getBlocked())
                 .build();
 
+        // Generate signature
+        String signature = null;
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("ticket", ticket);
+            payload.put("timestamp", System.currentTimeMillis());
+            signature = signingService.sign(payload);
+            log.info("Ticket signed successfully for license: {}", license.getCode());
+        } catch (Exception e) {
+            log.warn("Failed to sign ticket: {}", e.getMessage());
+        }
+
         return TicketResponse.builder()
                 .ticket(ticket)
-                .signature(null)
+                .signature(signature)
                 .build();
     }
 }

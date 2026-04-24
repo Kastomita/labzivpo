@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "License Management API",
-    "description": "API для управления лицензиями - создание, активация, проверка, продление",
+    "name": "PhotoPrint License Management API",
+    "description": "API для управления лицензиями с поддержкой ЭЦП (цифровой подписи)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,12 +11,12 @@
       "type": "string"
     },
     {
-      "key": "adminToken",
+      "key": "accessToken",
       "value": "",
       "type": "string"
     },
     {
-      "key": "userToken",
+      "key": "refreshToken",
       "value": "",
       "type": "string"
     },
@@ -26,8 +26,18 @@
       "type": "string"
     },
     {
-      "key": "deviceMac",
-      "value": "00:1B:44:11:3A:B7",
+      "key": "deviceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "licenseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "macAddress",
+      "value": "AA:BB:CC:DD:EE:FF",
       "type": "string"
     }
   ],
@@ -36,7 +46,24 @@
       "name": "1. Аутентификация",
       "item": [
         {
-          "name": "1.1 Логин администратора",
+          "name": "1.1 Логин (nser@example.com - ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.environment.set(\"accessToken\", jsonData.accessToken);",
+                  "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
+                  "    console.log(\"Token saved successfully\");",
+                  "} else {",
+                  "    console.log(\"Login failed\");",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -47,29 +74,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"admin@photoprint.com\",\n    \"password\": \"Test123!@#\"\n}"
+              "raw": "{\n    \"email\": \"nser@example.com\",\n    \"password\": \"Test123!@#\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
               "host": ["{{baseUrl}}"],
               "path": ["auth", "login"]
             }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var jsonData = pm.response.json();",
-                  "pm.environment.set(\"adminToken\", jsonData.accessToken);",
-                  "console.log(\"Admin Token set:\", jsonData.accessToken);"
-                ]
-              }
-            }
-          ]
+          }
         },
         {
-          "name": "1.2 Логин пользователя",
+          "name": "1.2 Регистрация пользователя",
           "request": {
             "method": "POST",
             "header": [
@@ -80,26 +95,35 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"ivan@example.com\",\n    \"password\": \"Test123!@#\"\n}"
+              "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"Test123!@#\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
+              "raw": "{{baseUrl}}/auth/register",
               "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "path": ["auth", "register"]
             }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var jsonData = pm.response.json();",
-                  "pm.environment.set(\"userToken\", jsonData.accessToken);",
-                  "console.log(\"User Token set:\", jsonData.accessToken);"
-                ]
+          }
+        },
+        {
+          "name": "1.3 Обновление токена",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
             }
-          ]
+          }
         }
       ]
     },
@@ -113,7 +137,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
@@ -124,13 +148,13 @@
           }
         },
         {
-          "name": "2.2 Создать продукт (ADMIN)",
+          "name": "2.2 Создать продукт (требует ADMIN)",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               },
               {
                 "key": "Content-Type",
@@ -139,7 +163,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"PhotoPrint Enterprise\"\n}"
+              "raw": "{\n    \"name\": \"PhotoPrint Premium\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/products",
@@ -157,6 +181,12 @@
           "name": "3.1 Получить все типы лицензий",
           "request": {
             "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/license-types",
               "host": ["{{baseUrl}}"],
@@ -165,13 +195,13 @@
           }
         },
         {
-          "name": "3.2 Создать тип лицензии (ADMIN)",
+          "name": "3.2 Создать тип лицензии (требует ADMIN)",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{accessToken}}"
               },
               {
                 "key": "Content-Type",
@@ -180,7 +210,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"QUARTER\",\n    \"defaultDurationInDays\": 90,\n    \"description\": \"Квартальная лицензия\"\n}"
+              "raw": "{\n    \"name\": \"PERPETUAL\",\n    \"defaultDurationInDays\": 36500,\n    \"description\": \"Вечная лицензия\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/license-types",
@@ -196,12 +226,26 @@
       "item": [
         {
           "name": "4.1 Зарегистрировать устройство",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.environment.set(\"deviceId\", jsonData.id);",
+                  "    console.log(\"Device ID saved:\", jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{userToken}}"
+                "value": "Bearer {{accessToken}}"
               },
               {
                 "key": "Content-Type",
@@ -210,7 +254,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"macAddress\": \"AA:BB:CC:DD:EE:FF\",\n    \"name\": \"Ноутбук Ивана\"\n}"
+              "raw": "{\n    \"macAddress\": \"{{macAddress}}\",\n    \"name\": \"Ноутбук Ивана\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/devices/register",
@@ -220,19 +264,36 @@
           }
         },
         {
-          "name": "4.2 Получить все устройства пользователя",
+          "name": "4.2 Получить устройства пользователя",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{userToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
               "raw": "{{baseUrl}}/devices",
               "host": ["{{baseUrl}}"],
               "path": ["devices"]
+            }
+          }
+        },
+        {
+          "name": "4.3 Получить лицензии устройства",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/devices/{{deviceId}}/licenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices", "{{deviceId}}", "licenses"]
             }
           }
         }
@@ -242,29 +303,7 @@
       "name": "5. Лицензии",
       "item": [
         {
-          "name": "5.1 Создать лицензию (ADMIN)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"productId\": 1,\n    \"typeId\": 2,\n    \"ownerId\": 2,\n    \"deviceCount\": 3,\n    \"description\": \"Годовая лицензия для Ивана\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/licenses/create",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "create"]
-            }
-          },
+          "name": "5.1 Создать лицензию (требует ADMIN)",
           "event": [
             {
               "listen": "test",
@@ -273,21 +312,19 @@
                   "var jsonData = pm.response.json();",
                   "if (jsonData.code) {",
                   "    pm.environment.set(\"licenseCode\", jsonData.code);",
-                  "    console.log(\"License Code:\", jsonData.code);",
+                  "    pm.environment.set(\"licenseId\", jsonData.licenseId);",
+                  "    console.log(\"License code saved:\", jsonData.code);",
                   "}"
                 ]
               }
             }
-          ]
-        },
-        {
-          "name": "5.2 Активировать лицензию",
+          ],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{userToken}}"
+                "value": "Bearer {{accessToken}}"
               },
               {
                 "key": "Content-Type",
@@ -296,7 +333,32 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"activationKey\": \"{{licenseCode}}\",\n    \"deviceMac\": \"AA:BB:CC:DD:EE:FF\",\n    \"deviceName\": \"Ноутбук Ивана\"\n}"
+              "raw": "{\n    \"productId\": 1,\n    \"typeId\": 2,\n    \"ownerId\": 8,\n    \"deviceCount\": 3,\n    \"description\": \"Тестовая годовая лицензия\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/licenses/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "create"]
+            }
+          }
+        },
+        {
+          "name": "5.2 Активировать лицензию",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"activationKey\": \"{{licenseCode}}\",\n    \"deviceMac\": \"{{macAddress}}\",\n    \"deviceName\": \"Ноутбук Ивана\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/licenses/activate",
@@ -306,38 +368,13 @@
           }
         },
         {
-          "name": "5.3 Проверить лицензию",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"deviceMac\": \"AA:BB:CC:DD:EE:FF\",\n    \"productId\": 1\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/licenses/check",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "check"]
-            }
-          }
-        },
-        {
-          "name": "5.4 Получить лицензию по коду",
+          "name": "5.3 Получить лицензию по коду",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{userToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
@@ -348,13 +385,63 @@
           }
         },
         {
-          "name": "5.5 Получить все лицензии пользователя",
+          "name": "5.4 Проверить лицензию (получить Ticket с подписью)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"deviceMac\": \"{{macAddress}}\",\n    \"productId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/licenses/check",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "check"]
+            }
+          }
+        },
+        {
+          "name": "5.5 Получить Ticket по коду лицензии (с ЭЦП)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"macAddress\": \"{{macAddress}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/licenses/{{licenseCode}}/ticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "{{licenseCode}}", "ticket"]
+            }
+          }
+        },
+        {
+          "name": "5.6 Получить все лицензии пользователя",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{userToken}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
@@ -365,13 +452,13 @@
           }
         },
         {
-          "name": "5.6 Продлить лицензию",
+          "name": "5.7 Продлить лицензию",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{userToken}}"
+                "value": "Bearer {{accessToken}}"
               },
               {
                 "key": "Content-Type",
@@ -388,20 +475,43 @@
               "path": ["licenses", "renew"]
             }
           }
+        },
+        {
+          "name": "5.8 Заблокировать/разблокировать лицензию (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/licenses/{{licenseId}}/block?blocked=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "{{licenseId}}", "block"],
+              "query": [
+                {
+                  "key": "blocked",
+                  "value": "true"
+                }
+              ]
+            }
+          }
         }
       ]
     },
     {
-      "name": "6. Ticket",
+      "name": "6. Проверка ЭЦП",
       "item": [
         {
-          "name": "6.1 Получить Ticket",
+          "name": "6.1 Получить Ticket с подписью (демонстрация ЭЦП)",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{userToken}}"
+                "value": "Bearer {{accessToken}}"
               },
               {
                 "key": "Content-Type",
@@ -410,7 +520,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"macAddress\": \"AA:BB:CC:DD:EE:FF\"\n}"
+              "raw": "{\n    \"macAddress\": \"{{macAddress}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/licenses/{{licenseCode}}/ticket",
