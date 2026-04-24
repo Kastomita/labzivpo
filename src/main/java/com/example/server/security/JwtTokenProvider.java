@@ -135,11 +135,19 @@ public class JwtTokenProvider {
                 .get("sessionId", String.class);
     }
 
-
+    // ИСПРАВЛЕННЫЙ МЕТОД - возвращает UserDetails как principal
     public org.springframework.security.core.Authentication getAuthentication(String token) {
         String email = getEmailFromAccessToken(token);
+        log.info("Getting authentication for email: {}", email);
+
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        log.info("UserDetails loaded: {}", userDetails);
+
+        // Важно: передаем userDetails, а не email
         return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                email, null, userDetails.getAuthorities());
+                userDetails,
+                null,
+                userDetails.getAuthorities()
+        );
     }
 }

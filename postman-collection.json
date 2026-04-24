@@ -1,30 +1,42 @@
 {
   "info": {
-    "name": "Photo Printing Service API",
-    "description": "API для сервиса фотопечати с JWT аутентификацией",
+    "name": "License Management API",
+    "description": "API для управления лицензиями - создание, активация, проверка, продление",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:8443",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "licenseCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deviceMac",
+      "value": "00:1B:44:11:3A:B7",
+      "type": "string"
+    }
+  ],
   "item": [
     {
       "name": "1. Аутентификация",
       "item": [
         {
-          "name": "1.1 Получить требования к паролю",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "https://localhost:8443/auth/password-requirements",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["auth", "password-requirements"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.2 Регистрация пользователя",
+          "name": "1.1 Логин администратора",
           "request": {
             "method": "POST",
             "header": [
@@ -35,44 +47,29 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Test123!@#\",\n  \"name\": \"Ivan Petrov\"\n}"
+              "raw": "{\n    \"email\": \"admin@photoprint.com\",\n    \"password\": \"Test123!@#\"\n}"
             },
             "url": {
-              "raw": "https://localhost:8443/auth/register",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["auth", "register"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.3 Логин (получить токены)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Test123!@#\"\n}"
-            },
-            "url": {
-              "raw": "https://localhost:8443/auth/login",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
               "path": ["auth", "login"]
             }
           },
-          "response": []
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"adminToken\", jsonData.accessToken);",
+                  "console.log(\"Admin Token set:\", jsonData.accessToken);"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "1.4 Обновление токена (refresh)",
+          "name": "1.2 Логин пользователя",
           "request": {
             "method": "POST",
             "header": [
@@ -83,72 +80,57 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"YOUR_REFRESH_TOKEN_FROM_LOGIN\"\n}"
+              "raw": "{\n    \"email\": \"ivan@example.com\",\n    \"password\": \"Test123!@#\"\n}"
             },
             "url": {
-              "raw": "https://localhost:8443/auth/refresh",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["auth", "refresh"]
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
             }
           },
-          "response": []
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"userToken\", jsonData.accessToken);",
+                  "console.log(\"User Token set:\", jsonData.accessToken);"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "2. Пользователи",
+      "name": "2. Продукты",
       "item": [
         {
-          "name": "2.1 Получить всех пользователей (требует прав modify)",
+          "name": "2.1 Получить все продукты",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
-              "raw": "https://localhost:8443/users",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["users"]
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "2.2 Получить пользователя по ID (требует прав modify)",
+          "name": "2.2 Создать продукт (ADMIN)",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "https://localhost:8443/users/1",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["users", "1"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.3 Обновить роль пользователя (требует прав modify)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminToken}}"
               },
               {
                 "key": "Content-Type",
@@ -157,131 +139,39 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"role\": \"ADMIN\"\n}"
+              "raw": "{\n    \"name\": \"PhotoPrint Enterprise\"\n}"
             },
             "url": {
-              "raw": "https://localhost:8443/users/1/role",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["users", "1", "role"]
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"]
             }
-          },
-          "response": []
-        },
-        {
-          "name": "2.4 Удалить пользователя (требует прав modify)",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "https://localhost:8443/users/1",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["users", "1"]
-            }
-          },
-          "response": []
+          }
         }
       ]
     },
     {
-      "name": "3. Фото",
+      "name": "3. Типы лицензий",
       "item": [
         {
-          "name": "3.1 Загрузить фото",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "file",
-                  "type": "file",
-                  "src": "C:/path/to/your/photo.jpg"
-                },
-                {
-                  "key": "description",
-                  "value": "My beautiful photo",
-                  "type": "text"
-                }
-              ]
-            },
-            "url": {
-              "raw": "https://localhost:8443/api/photos/upload",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["api", "photos", "upload"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3.2 Получить мои фото",
+          "name": "3.1 Получить все типы лицензий",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
             "url": {
-              "raw": "https://localhost:8443/api/photos/my",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["api", "photos", "my"]
+              "raw": "{{baseUrl}}/license-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["license-types"]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "3.3 Удалить фото",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "https://localhost:8443/api/photos/1",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["api", "photos", "1"]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "4. Заказы",
-      "item": [
-        {
-          "name": "4.1 Создать заказ",
+          "name": "3.2 Создать тип лицензии (ADMIN)",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminToken}}"
               },
               {
                 "key": "Content-Type",
@@ -290,147 +180,246 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"shippingAddress\": \"Moscow, Lenina street, 1\",\n  \"phoneNumber\": \"+79991234567\",\n  \"items\": [\n    {\n      \"photoId\": 1,\n      \"printSize\": \"SIZE_10x15\",\n      \"quantity\": 2,\n      \"paperType\": \"glossy\"\n    }\n  ]\n}"
+              "raw": "{\n    \"name\": \"QUARTER\",\n    \"defaultDurationInDays\": 90,\n    \"description\": \"Квартальная лицензия\"\n}"
             },
             "url": {
-              "raw": "https://localhost:8443/api/orders",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["api", "orders"]
+              "raw": "{{baseUrl}}/license-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["license-types"]
             }
-          },
-          "response": []
-        },
-        {
-          "name": "4.2 Получить мои заказы",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "https://localhost:8443/api/orders/my",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["api", "orders", "my"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "4.3 Получить заказ по ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "https://localhost:8443/api/orders/1",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["api", "orders", "1"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "4.4 Отменить заказ",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "https://localhost:8443/api/orders/1/cancel",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["api", "orders", "1", "cancel"]
-            }
-          },
-          "response": []
+          }
         }
       ]
     },
     {
-      "name": "5. Административные (требуют прав modify)",
+      "name": "4. Устройства",
       "item": [
         {
-          "name": "5.1 Получить все заказы",
+          "name": "4.1 Зарегистрировать устройство",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"macAddress\": \"AA:BB:CC:DD:EE:FF\",\n    \"name\": \"Ноутбук Ивана\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/devices/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices", "register"]
+            }
+          }
+        },
+        {
+          "name": "4.2 Получить все устройства пользователя",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{userToken}}"
               }
             ],
             "url": {
-              "raw": "https://localhost:8443/api/orders/admin/all",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["api", "orders", "admin", "all"]
+              "raw": "{{baseUrl}}/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices"]
             }
-          },
-          "response": []
-        },
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Лицензии",
+      "item": [
         {
-          "name": "5.2 Обновить статус заказа",
+          "name": "5.1 Создать лицензию (ADMIN)",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{adminAccessToken}}"
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"productId\": 1,\n    \"typeId\": 2,\n    \"ownerId\": 2,\n    \"deviceCount\": 3,\n    \"description\": \"Годовая лицензия для Ивана\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/licenses/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "create"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.code) {",
+                  "    pm.environment.set(\"licenseCode\", jsonData.code);",
+                  "    console.log(\"License Code:\", jsonData.code);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Активировать лицензию",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"activationKey\": \"{{licenseCode}}\",\n    \"deviceMac\": \"AA:BB:CC:DD:EE:FF\",\n    \"deviceName\": \"Ноутбук Ивана\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/licenses/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "activate"]
+            }
+          }
+        },
+        {
+          "name": "5.3 Проверить лицензию",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"deviceMac\": \"AA:BB:CC:DD:EE:FF\",\n    \"productId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/licenses/check",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "check"]
+            }
+          }
+        },
+        {
+          "name": "5.4 Получить лицензию по коду",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
               }
             ],
             "url": {
-              "raw": "https://localhost:8443/api/orders/admin/1/status?status=CONFIRMED",
-              "protocol": "https",
-              "host": ["localhost"],
-              "port": "8443",
-              "path": ["api", "orders", "admin", "1", "status"],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "CONFIRMED"
-                }
-              ]
+              "raw": "{{baseUrl}}/licenses/{{licenseCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "{{licenseCode}}"]
             }
-          },
-          "response": []
+          }
+        },
+        {
+          "name": "5.5 Получить все лицензии пользователя",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/licenses/user",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "user"]
+            }
+          }
+        },
+        {
+          "name": "5.6 Продлить лицензию",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"activationKey\": \"{{licenseCode}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/licenses/renew",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "renew"]
+            }
+          }
         }
       ]
-    }
-  ],
-  "variable": [
-    {
-      "key": "accessToken",
-      "value": "",
-      "type": "string"
     },
     {
-      "key": "refreshToken",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "adminAccessToken",
-      "value": "",
-      "type": "string"
+      "name": "6. Ticket",
+      "item": [
+        {
+          "name": "6.1 Получить Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"macAddress\": \"AA:BB:CC:DD:EE:FF\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/licenses/{{licenseCode}}/ticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["licenses", "{{licenseCode}}", "ticket"]
+            }
+          }
+        }
+      ]
     }
   ]
 }
