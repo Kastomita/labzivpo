@@ -48,10 +48,12 @@ jobs:
         run: |
           mkdir -p src/main/resources
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > src/main/resources/server.jks
+          ls -la src/main/resources/
 
       - name: Decode signing keystore
         run: |
           echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > src/main/resources/signing.jks
+          ls -la src/main/resources/
 
       - name: Build with Maven
         run: mvn clean compile -B
