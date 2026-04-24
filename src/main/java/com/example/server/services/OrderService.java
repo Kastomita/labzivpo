@@ -2,11 +2,14 @@ package com.example.server.services;
 
 import com.example.server.entities.Order;
 import com.example.server.entities.OrderItem;
+import com.example.server.entities.Photo;
 import com.example.server.entities.User;
+import com.example.server.models.CreateOrderRequest;
 import com.example.server.models.OrderStatus;
 import com.example.server.models.PrintSize;
 import com.example.server.repositories.OrderItemRepository;
 import com.example.server.repositories.OrderRepository;
+import com.example.server.repositories.PhotoRepository;
 import com.example.server.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,35 +28,57 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final PhotoRepository photoRepository;
     private final UserRepository userRepository;
 
     @Transactional
-    public Order createOrder(Order order) {
+    public Order createOrder(CreateOrderRequest request) {
         User currentUser = getCurrentUser();
 
-        order.setOrderNumber(generateOrderNumber());
-        order.setUser(currentUser);
-        order.setCreatedAt(LocalDateTime.now());
-        order.setStatus(OrderStatus.PENDING);
-
-        // Вычислить общую сумму
-        BigDecimal total = BigDecimal.ZERO;
-        for (OrderItem item : order.getItems()) {
-            PrintSize printSize = item.getPrintSize();
-            item.setPricePerUnit(printSize.getPrice());
-            item.setTotalPrice(printSize.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
-            item.setOrder(order);
-            total = total.add(item.getTotalPrice());
+        if (request.getItems() == null) {
+            request.setItems(new ArrayList<>());
         }
-        order.setTotalAmount(total);
+
+        Order order = Order.builder()
+                .orderNumber(generateOrderNumber())
+                .user(currentUser)
+                .shippingAddress(request.getShippingAddress())
+                .phoneNumber(request.getPhoneNumber())
+                .status(OrderStatus.PENDING)
+                .createdAt(LocalDateTime.now())
+                .items(new ArrayList<>())
+                .totalAmount(BigDecimal.ZERO)
+                .build();
 
         Order savedOrder = orderRepository.save(order);
 
-        for (OrderItem item : order.getItems()) {
-            orderItemRepository.save(item);
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        for (CreateOrderRequest.OrderItemRequest itemRequest : request.getItems()) {
+            Photo photo = photoRepository.findById(itemRequest.getPhotoId())
+                    .orElseThrow(() -> new RuntimeException("Фото не найдено: " + itemRequest.getPhotoId()));
+
+            PrintSize printSize = PrintSize.valueOf(itemRequest.getPrintSize());
+            BigDecimal pricePerUnit = printSize.getPrice();
+            BigDecimal itemTotal = pricePerUnit.multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+
+            OrderItem orderItem = OrderItem.builder()
+                    .order(savedOrder)
+                    .photo(photo)
+                    .printSize(printSize)
+                    .quantity(itemRequest.getQuantity())
+                    .pricePerUnit(pricePerUnit)
+                    .totalPrice(itemTotal)
+                    .paperType(itemRequest.getPaperType())
+                    .build();
+
+            orderItemRepository.save(orderItem);
+            savedOrder.getItems().add(orderItem);
+            totalAmount = totalAmount.add(itemTotal);
         }
 
-        return savedOrder;
+        savedOrder.setTotalAmount(totalAmount);
+        return orderRepository.save(savedOrder);
     }
 
     public List<Order> getUserOrders() {

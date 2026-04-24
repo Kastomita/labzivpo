@@ -1,0 +1,436 @@
+{
+  "info": {
+    "name": "Photo Printing Service API",
+    "description": "API для сервиса фотопечати с JWT аутентификацией",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Аутентификация",
+      "item": [
+        {
+          "name": "1.1 Получить требования к паролю",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:8443/auth/password-requirements",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["auth", "password-requirements"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Регистрация пользователя",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Test123!@#\",\n  \"name\": \"Ivan Petrov\"\n}"
+            },
+            "url": {
+              "raw": "https://localhost:8443/auth/register",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Логин (получить токены)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Test123!@#\"\n}"
+            },
+            "url": {
+              "raw": "https://localhost:8443/auth/login",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Обновление токена (refresh)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"YOUR_REFRESH_TOKEN_FROM_LOGIN\"\n}"
+            },
+            "url": {
+              "raw": "https://localhost:8443/auth/refresh",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["auth", "refresh"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Пользователи",
+      "item": [
+        {
+          "name": "2.1 Получить всех пользователей (требует прав modify)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/users",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Получить пользователя по ID (требует прав modify)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/users/1",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["users", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Обновить роль пользователя (требует прав modify)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "https://localhost:8443/users/1/role",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["users", "1", "role"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Удалить пользователя (требует прав modify)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/users/1",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["users", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Фото",
+      "item": [
+        {
+          "name": "3.1 Загрузить фото",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "C:/path/to/your/photo.jpg"
+                },
+                {
+                  "key": "description",
+                  "value": "My beautiful photo",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://localhost:8443/api/photos/upload",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["api", "photos", "upload"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Получить мои фото",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/api/photos/my",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["api", "photos", "my"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Удалить фото",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/api/photos/1",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["api", "photos", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Заказы",
+      "item": [
+        {
+          "name": "4.1 Создать заказ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shippingAddress\": \"Moscow, Lenina street, 1\",\n  \"phoneNumber\": \"+79991234567\",\n  \"items\": [\n    {\n      \"photoId\": 1,\n      \"printSize\": \"SIZE_10x15\",\n      \"quantity\": 2,\n      \"paperType\": \"glossy\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "https://localhost:8443/api/orders",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["api", "orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Получить мои заказы",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/api/orders/my",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["api", "orders", "my"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Получить заказ по ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/api/orders/1",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["api", "orders", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Отменить заказ",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/api/orders/1/cancel",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["api", "orders", "1", "cancel"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Административные (требуют прав modify)",
+      "item": [
+        {
+          "name": "5.1 Получить все заказы",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/api/orders/admin/all",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["api", "orders", "admin", "all"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 Обновить статус заказа",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "https://localhost:8443/api/orders/admin/1/status?status=CONFIRMED",
+              "protocol": "https",
+              "host": ["localhost"],
+              "port": "8443",
+              "path": ["api", "orders", "admin", "1", "status"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "CONFIRMED"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminAccessToken",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
