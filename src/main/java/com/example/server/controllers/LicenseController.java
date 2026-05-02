@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -57,8 +59,27 @@ public class LicenseController {
                     .body(Map.of("error", "User not authenticated"));
         }
         try {
-            LicenseTicket ticket = licenseService.activateLicense(request, user.getId());
-            return ResponseEntity.ok(ticket);
+            // Активируем лицензию
+            licenseService.activateLicense(request, user.getId());
+
+            // Получаем лицензию для создания подписанного тикета
+            License license = licenseRepository.findByCode(request.getActivationKey())
+                    .orElseThrow(() -> new RuntimeException("License not found"));
+
+            // Генерируем подписанный тикет
+            TicketResponse ticketResponse = ticketService.generateTicket(
+                    license.getCode(),
+                    request.getDeviceMac(),
+                    user.getId()
+            );
+
+            // Используем LinkedHashMap для сохранения порядка полей
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("ticket", ticketResponse.getTicket());
+            response.put("signature", ticketResponse.getSignature());
+
+            return ResponseEntity.ok(response);
+
         } catch (RuntimeException e) {
             String message = e.getMessage();
             if (message.contains("limit reached")) {
@@ -100,8 +121,25 @@ public class LicenseController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "Device not found"));
             }
-            LicenseTicket ticket = licenseService.checkLicense(request, user.getId());
-            return ResponseEntity.ok(ticket);
+
+            // Получаем подписанный тикет для проверки
+            License license = licenseRepository.findActiveByDeviceUserAndProduct(
+                            request.getDeviceMac(), user.getId(), request.getProductId())
+                    .orElseThrow(() -> new RuntimeException("No active license found"));
+
+            TicketResponse ticketResponse = ticketService.generateTicket(
+                    license.getCode(),
+                    request.getDeviceMac(),
+                    user.getId()
+            );
+
+            // Используем LinkedHashMap для сохранения порядка полей
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("ticket", ticketResponse.getTicket());
+            response.put("signature", ticketResponse.getSignature());
+
+            return ResponseEntity.ok(response);
+
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
@@ -117,7 +155,13 @@ public class LicenseController {
         try {
             String macAddress = request.get("macAddress");
             TicketResponse response = ticketService.generateTicket(licenseCode, macAddress, user.getId());
-            return ResponseEntity.ok(response);
+
+            // Используем LinkedHashMap для сохранения порядка полей
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("ticket", response.getTicket());
+            result.put("signature", response.getSignature());
+
+            return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", e.getMessage()));

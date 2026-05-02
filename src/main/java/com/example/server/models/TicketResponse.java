@@ -12,4 +12,6 @@ import lombok.NoArgsConstructor;
 public class TicketResponse {
     private Ticket ticket;
     private String signature;
+    private String signatureAlgorithm;
+    private Long timestamp;
 }

@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "PhotoPrint License Management API",
-    "description": "API для управления лицензиями с поддержкой ЭЦП (цифровой подписи)",
+    "name": "Anti-Malware Signatures API",
+    "description": "API для управления антивирусными сигнатурами с ЭЦП",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -16,37 +16,22 @@
       "type": "string"
     },
     {
-      "key": "refreshToken",
+      "key": "adminAccessToken",
       "value": "",
       "type": "string"
     },
     {
-      "key": "licenseCode",
+      "key": "signatureId",
       "value": "",
-      "type": "string"
-    },
-    {
-      "key": "deviceId",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "licenseId",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "macAddress",
-      "value": "AA:BB:CC:DD:EE:FF",
       "type": "string"
     }
   ],
   "item": [
     {
-      "name": "1. Аутентификация",
+      "name": "0. Аутентификация",
       "item": [
         {
-          "name": "1.1 Логин (nser@example.com - ADMIN)",
+          "name": "Login as User",
           "event": [
             {
               "listen": "test",
@@ -55,10 +40,42 @@
                   "var jsonData = pm.response.json();",
                   "if (jsonData.accessToken) {",
                   "    pm.environment.set(\"accessToken\", jsonData.accessToken);",
-                  "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
-                  "    console.log(\"Token saved successfully\");",
-                  "} else {",
-                  "    console.log(\"Login failed\");",
+                  "    console.log(\"User token saved\");",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Test123!@#\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.environment.set(\"adminAccessToken\", jsonData.accessToken);",
+                  "    console.log(\"Admin token saved\");",
                   "}"
                 ]
               }
@@ -82,56 +99,14 @@
               "path": ["auth", "login"]
             }
           }
-        },
-        {
-          "name": "1.2 Регистрация пользователя",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"Test123!@#\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "register"]
-            }
-          }
-        },
-        {
-          "name": "1.3 Обновление токена",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/refresh",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "refresh"]
-            }
-          }
         }
       ]
     },
     {
-      "name": "2. Продукты",
+      "name": "1. Чтение сигнатур (требуется认证)",
       "item": [
         {
-          "name": "2.1 Получить все продукты",
+          "name": "1.1 Получить все активные сигнатуры",
           "request": {
             "method": "GET",
             "header": [
@@ -141,14 +116,54 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/products",
+              "raw": "{{baseUrl}}/signatures",
               "host": ["{{baseUrl}}"],
-              "path": ["products"]
+              "path": ["signatures"]
             }
           }
         },
         {
-          "name": "2.2 Создать продукт (требует ADMIN)",
+          "name": "1.2 Получить сигнатуру по ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signatures/{{signatureId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["signatures", "{{signatureId}}"]
+            }
+          }
+        },
+        {
+          "name": "1.3 Инкрементальный экспорт (с момента)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signatures/export/incremental?since=2024-01-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["signatures", "export", "incremental"],
+              "query": [
+                {
+                  "key": "since",
+                  "value": "2024-01-01T00:00:00Z"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.4 Получить сигнатуры по списку ID",
           "request": {
             "method": "POST",
             "header": [
@@ -163,69 +178,22 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"PhotoPrint Premium\"\n}"
+              "raw": "{\n    \"ids\": [\"{{signatureId}}\"]\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/products",
+              "raw": "{{baseUrl}}/signatures/export/by-ids",
               "host": ["{{baseUrl}}"],
-              "path": ["products"]
+              "path": ["signatures", "export", "by-ids"]
             }
           }
         }
       ]
     },
     {
-      "name": "3. Типы лицензий",
+      "name": "2. Создание сигнатур (только ADMIN)",
       "item": [
         {
-          "name": "3.1 Получить все типы лицензий",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/license-types",
-              "host": ["{{baseUrl}}"],
-              "path": ["license-types"]
-            }
-          }
-        },
-        {
-          "name": "3.2 Создать тип лицензии (требует ADMIN)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"PERPETUAL\",\n    \"defaultDurationInDays\": 36500,\n    \"description\": \"Вечная лицензия\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/license-types",
-              "host": ["{{baseUrl}}"],
-              "path": ["license-types"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "4. Устройства",
-      "item": [
-        {
-          "name": "4.1 Зарегистрировать устройство",
+          "name": "2.1 Создать сигнатуру Win32.Trojan",
           "event": [
             {
               "listen": "test",
@@ -233,8 +201,8 @@
                 "exec": [
                   "var jsonData = pm.response.json();",
                   "if (jsonData.id) {",
-                  "    pm.environment.set(\"deviceId\", jsonData.id);",
-                  "    console.log(\"Device ID saved:\", jsonData.id);",
+                  "    pm.environment.set(\"signatureId\", jsonData.id);",
+                  "    console.log(\"Signature ID saved:\", jsonData.id);",
                   "}"
                 ]
               }
@@ -245,7 +213,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminAccessToken}}"
               },
               {
                 "key": "Content-Type",
@@ -254,264 +222,78 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"macAddress\": \"{{macAddress}}\",\n    \"name\": \"Ноутбук Ивана\"\n}"
+              "raw": "{\n    \"threatName\": \"Win32.Trojan.Generic\",\n    \"firstBytesHex\": \"4D5A90000300000004000000FFFF\",\n    \"remainderHashHex\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"remainderLength\": 1024,\n    \"fileType\": \"PE32\",\n    \"offsetStart\": 0,\n    \"offsetEnd\": 128\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/devices/register",
+              "raw": "{{baseUrl}}/signatures",
               "host": ["{{baseUrl}}"],
-              "path": ["devices", "register"]
+              "path": ["signatures"]
             }
           }
         },
         {
-          "name": "4.2 Получить устройства пользователя",
+          "name": "2.2 Создать сигнатуру Linux.Mirai",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"threatName\": \"Linux.Mirai.Botnet\",\n    \"firstBytesHex\": \"7F454C46020101000000000000000000\",\n    \"remainderHashHex\": \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\",\n    \"remainderLength\": 2048,\n    \"fileType\": \"ELF\",\n    \"offsetStart\": 0,\n    \"offsetEnd\": 256\n}"
+            },
             "url": {
-              "raw": "{{baseUrl}}/devices",
+              "raw": "{{baseUrl}}/signatures",
               "host": ["{{baseUrl}}"],
-              "path": ["devices"]
+              "path": ["signatures"]
             }
           }
         },
         {
-          "name": "4.3 Получить лицензии устройства",
+          "name": "2.3 Создать сигнатуру PDF.Exploit",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"threatName\": \"PDF.Exploit.CVE-2023-XXXX\",\n    \"firstBytesHex\": \"255044462D312E340A25C7EC8FA20A\",\n    \"remainderHashHex\": \"d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35\",\n    \"remainderLength\": 512,\n    \"fileType\": \"PDF\",\n    \"offsetStart\": 0,\n    \"offsetEnd\": 64\n}"
+            },
             "url": {
-              "raw": "{{baseUrl}}/devices/{{deviceId}}/licenses",
+              "raw": "{{baseUrl}}/signatures",
               "host": ["{{baseUrl}}"],
-              "path": ["devices", "{{deviceId}}", "licenses"]
+              "path": ["signatures"]
             }
           }
         }
       ]
     },
     {
-      "name": "5. Лицензии",
+      "name": "3. Обновление сигнатур (только ADMIN)",
       "item": [
         {
-          "name": "5.1 Создать лицензию (требует ADMIN)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.code) {",
-                  "    pm.environment.set(\"licenseCode\", jsonData.code);",
-                  "    pm.environment.set(\"licenseId\", jsonData.licenseId);",
-                  "    console.log(\"License code saved:\", jsonData.code);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"productId\": 1,\n    \"typeId\": 2,\n    \"ownerId\": 8,\n    \"deviceCount\": 3,\n    \"description\": \"Тестовая годовая лицензия\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/licenses/create",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "create"]
-            }
-          }
-        },
-        {
-          "name": "5.2 Активировать лицензию",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"activationKey\": \"{{licenseCode}}\",\n    \"deviceMac\": \"{{macAddress}}\",\n    \"deviceName\": \"Ноутбук Ивана\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/licenses/activate",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "activate"]
-            }
-          }
-        },
-        {
-          "name": "5.3 Получить лицензию по коду",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/licenses/{{licenseCode}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "{{licenseCode}}"]
-            }
-          }
-        },
-        {
-          "name": "5.4 Проверить лицензию (получить Ticket с подписью)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"deviceMac\": \"{{macAddress}}\",\n    \"productId\": 1\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/licenses/check",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "check"]
-            }
-          }
-        },
-        {
-          "name": "5.5 Получить Ticket по коду лицензии (с ЭЦП)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"macAddress\": \"{{macAddress}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/licenses/{{licenseCode}}/ticket",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "{{licenseCode}}", "ticket"]
-            }
-          }
-        },
-        {
-          "name": "5.6 Получить все лицензии пользователя",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/licenses/user",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "user"]
-            }
-          }
-        },
-        {
-          "name": "5.7 Продлить лицензию",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"activationKey\": \"{{licenseCode}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/licenses/renew",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "renew"]
-            }
-          }
-        },
-        {
-          "name": "5.8 Заблокировать/разблокировать лицензию (ADMIN)",
+          "name": "3.1 Обновить сигнатуру",
           "request": {
             "method": "PUT",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/licenses/{{licenseId}}/block?blocked=true",
-              "host": ["{{baseUrl}}"],
-              "path": ["licenses", "{{licenseId}}", "block"],
-              "query": [
-                {
-                  "key": "blocked",
-                  "value": "true"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "6. Проверка ЭЦП",
-      "item": [
-        {
-          "name": "6.1 Получить Ticket с подписью (демонстрация ЭЦП)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminAccessToken}}"
               },
               {
                 "key": "Content-Type",
@@ -520,12 +302,175 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"macAddress\": \"{{macAddress}}\"\n}"
+              "raw": "{\n    \"threatName\": \"Win32.Trojan.Generic.Updated\",\n    \"firstBytesHex\": \"4D5A90000300000004000000FFFF\",\n    \"remainderHashHex\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"remainderLength\": 2048,\n    \"fileType\": \"PE32+\",\n    \"offsetStart\": 0,\n    \"offsetEnd\": 256\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/licenses/{{licenseCode}}/ticket",
+              "raw": "{{baseUrl}}/signatures/{{signatureId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["licenses", "{{licenseCode}}", "ticket"]
+              "path": ["signatures", "{{signatureId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Удаление сигнатур (только ADMIN)",
+      "item": [
+        {
+          "name": "4.1 Удалить сигнатуру (логическое)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signatures/{{signatureId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["signatures", "{{signatureId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. История и аудит (только ADMIN)",
+      "item": [
+        {
+          "name": "5.1 Получить историю версий сигнатуры",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signatures/{{signatureId}}/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["signatures", "{{signatureId}}", "history"]
+            }
+          }
+        },
+        {
+          "name": "5.2 Получить аудит изменений сигнатуры",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signatures/{{signatureId}}/audit",
+              "host": ["{{baseUrl}}"],
+              "path": ["signatures", "{{signatureId}}", "audit"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Тесты с некорректными данными",
+      "item": [
+        {
+          "name": "6.1 Ошибка: неверный hex в firstBytesHex",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"threatName\": \"Test.InvalidHex\",\n    \"firstBytesHex\": \"ZZZZZZ\",\n    \"remainderHashHex\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"remainderLength\": 1024,\n    \"fileType\": \"PE32\",\n    \"offsetStart\": 0,\n    \"offsetEnd\": 128\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/signatures",
+              "host": ["{{baseUrl}}"],
+              "path": ["signatures"]
+            }
+          }
+        },
+        {
+          "name": "6.2 Ошибка: remainderHashHex не 64 символа",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"threatName\": \"Test.InvalidHash\",\n    \"firstBytesHex\": \"4D5A9000\",\n    \"remainderHashHex\": \"short\",\n    \"remainderLength\": 1024,\n    \"fileType\": \"PE32\",\n    \"offsetStart\": 0,\n    \"offsetEnd\": 128\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/signatures",
+              "host": ["{{baseUrl}}"],
+              "path": ["signatures"]
+            }
+          }
+        },
+        {
+          "name": "6.3 Ошибка: offsetEnd < offsetStart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"threatName\": \"Test.InvalidOffset\",\n    \"firstBytesHex\": \"4D5A9000\",\n    \"remainderHashHex\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"remainderLength\": 1024,\n    \"fileType\": \"PE32\",\n    \"offsetStart\": 100,\n    \"offsetEnd\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/signatures",
+              "host": ["{{baseUrl}}"],
+              "path": ["signatures"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Проверка ЭЦП сигнатур",
+      "item": [
+        {
+          "name": "7.1 Получить сигнатуру с цифровой подписью",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signatures/{{signatureId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["signatures", "{{signatureId}}"]
             }
           }
         }

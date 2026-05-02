@@ -24,6 +24,7 @@ public class LicenseService {
     private final LicenseHistoryRepository licenseHistoryRepository;
     private final LicenseKeyGenerator licenseKeyGenerator;
     private final LicenseTicketBuilder ticketBuilder;
+    private final TicketService ticketService;
 
     @Transactional
     public License createLicense(CreateLicenseRequest request, Long adminId) {
@@ -146,7 +147,7 @@ public class LicenseService {
                 endingDate.minusDays(7).isBefore(now);
 
         if (!isExpiredOrExpiringSoon) {
-            throw new RuntimeException("License is not eligible for renewal.");
+            throw new RuntimeException("License is not eligible for renewal. Renewal is only allowed within 7 days of expiration.");
         }
 
         LicenseType licenseType = licenseTypeService.getTypeOrFail(license.getTypeId());
