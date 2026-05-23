@@ -4,6 +4,7 @@ import com.example.server.entities.Device;
 import com.example.server.entities.License;
 import com.example.server.models.Ticket;
 import com.example.server.models.TicketResponse;
+import com.example.server.models.LicenseTicket;
 import com.example.server.repositories.DeviceLicenseRepository;
 import com.example.server.repositories.DeviceRepository;
 import com.example.server.repositories.LicenseRepository;

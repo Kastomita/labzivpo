@@ -26,7 +26,6 @@ public class SigningService {
 
     public String sign(Object payload) {
         try {
-            // 1. Canonicalization
             byte[] canonicalBytes;
             try {
                 canonicalBytes = canonicalizer.canonicalize(payload);
@@ -41,39 +40,7 @@ public class SigningService {
                 );
             }
 
-            // 2. Get signing key
-            PrivateKey privateKey;
-            try {
-                privateKey = keyProvider.getSigningKey();
-            } catch (SignatureException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new SignatureException(
-                        SignatureException.ErrorCode.KEY_PROVIDER_ERROR,
-                        "Failed to get signing key: " + e.getMessage(),
-                        e
-                );
-            }
-
-            // 3. Sign
-            byte[] signatureBytes;
-            try {
-                Signature signature = Signature.getInstance(properties.getSignatureAlgorithm());
-                signature.initSign(privateKey);
-                signature.update(canonicalBytes);
-                signatureBytes = signature.sign();
-                log.debug("Generated signature of {} bytes", signatureBytes.length);
-            } catch (Exception e) {
-                throw new SignatureException(
-                        SignatureException.ErrorCode.SIGN_OPERATION_FAILED,
-                        "Sign operation failed: " + e.getMessage(),
-                        e
-                );
-            }
-
-            // 4. Base64 encode
-            return Base64.getEncoder().encodeToString(signatureBytes);
-
+            return signBytesToString(canonicalBytes);
         } catch (SignatureException e) {
             throw e;
         } catch (Exception e) {
@@ -83,5 +50,58 @@ public class SigningService {
                     e
             );
         }
+    }
+
+    public byte[] signBytes(byte[] data) throws Exception {
+        PrivateKey privateKey;
+        try {
+            privateKey = keyProvider.getSigningKey();
+        } catch (SignatureException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SignatureException(
+                    SignatureException.ErrorCode.KEY_PROVIDER_ERROR,
+                    "Failed to get signing key: " + e.getMessage(),
+                    e
+            );
+        }
+
+        try {
+            Signature signature = Signature.getInstance(properties.getSignatureAlgorithm());
+            signature.initSign(privateKey);
+            signature.update(data);
+            return signature.sign();
+        } catch (Exception e) {
+            throw new SignatureException(
+                    SignatureException.ErrorCode.SIGN_OPERATION_FAILED,
+                    "Sign operation failed: " + e.getMessage(),
+                    e
+            );
+        }
+    }
+
+    public String signBytesToString(byte[] data) {
+        try {
+            byte[] signatureBytes = signBytes(data);
+            log.debug("Generated signature of {} bytes", signatureBytes.length);
+            return Base64.getEncoder().encodeToString(signatureBytes);
+        } catch (SignatureException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SignatureException(
+                    SignatureException.ErrorCode.SIGN_OPERATION_FAILED,
+                    "Sign operation failed: " + e.getMessage(),
+                    e
+            );
+        }
+    }
+
+    public boolean verify(String signatureBase64, Object payload) throws Exception {
+        byte[] canonicalBytes = canonicalizer.canonicalize(payload);
+        java.security.PublicKey publicKey = keyProvider.getCertificate().getPublicKey();
+        Signature verifier = Signature.getInstance(properties.getSignatureAlgorithm());
+        verifier.initVerify(publicKey);
+        verifier.update(canonicalBytes);
+        return verifier.verify(Base64.getDecoder().decode(signatureBase64));
     }
 }
